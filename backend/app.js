@@ -1,41 +1,24 @@
-require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
 // Rutas
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
 const factionRoutes = require('./routes/factions');
+const userRoutes = require('./routes/users');
 
-// Crear app express
 const app = express();
-
-// Middleware globales
 app.use(cors());
 app.use(express.json());
 
-// Rutas
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+// Conexión a MongoDB (opciones limpias)
+mongoose.connect('mongodb://localhost:27017/cosmosdb');
+
+// Rutas API
 app.use('/api/factions', factionRoutes);
+app.use('/api/users', userRoutes); // <- rutas de usuarios
 
-// Ruta de prueba
-app.get('/', (req, res) => {
-  res.send('API funcionando correctamente');
-});
-
-// Conexión a MongoDB y arranque del servidor
+// Puerto
 const PORT = process.env.PORT || 4000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/myapp';
-
-mongoose.connect(MONGO_URI)
-  .then(() => {
-    console.log('Conectado a MongoDB');
-    app.listen(PORT, () => {
-      console.log(`Servidor corriendo en puerto ${PORT}`);
-    });
-  })
-  .catch(err => {
-    console.error('Error conectando a MongoDB:', err.message);
-  });
+app.listen(PORT, () => {
+  console.log(`Servidor backend escuchando en puerto ${PORT}`);
+});

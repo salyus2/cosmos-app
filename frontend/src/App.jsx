@@ -1,10 +1,11 @@
-import React from "react";
-import FactionsPage from "./pages/FactionsPage";
+import React from 'react';
+import AdminPanel from './components/AdminPanel';
 
 function App() {
   return (
     <div>
-      <FactionsPage />
+      <h1>Cosmos App</h1>
+      <AdminPanel />
     </div>
   );
 }
