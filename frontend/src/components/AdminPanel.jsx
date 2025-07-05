@@ -1,43 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import UserProfile from './UserProfile';
 
 const AdminPanel = () => {
-  const [factions, setFactions] = useState([]);
   const [users, setUsers] = useState([]);
+  const [factions, setFactions] = useState([]);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [faction, setFaction] = useState('');
   const [message, setMessage] = useState(null);
+  const [editingUserId, setEditingUserId] = useState(null);
 
-  // Cargar facciones y usuarios al montar el componente
   useEffect(() => {
-    fetch('http://localhost:4000/api/factions')
-      .then(res => res.json())
-      .then(data => setFactions(data))
-      .catch(() => setFactions([]));
-
     fetchUsers();
+    fetchFactions();
   }, []);
 
-  const fetchUsers = () => {
-    fetch('http://localhost:4000/api/users')
-      .then(res => res.json())
-      .then(data => setUsers(data))
-      .catch(() => setUsers([]));
+  const fetchUsers = async () => {
+    const res = await fetch('http://localhost:4000/api/users');
+    const data = await res.json();
+    setUsers(data);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage(null);
+  const fetchFactions = async () => {
+    const res = await fetch('http://localhost:4000/api/factions');
+    const data = await res.json();
+    setFactions(data);
+  };
 
-    const response = await fetch('http://localhost:4000/api/users', {
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    const res = await fetch('http://localhost:4000/api/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, faction }),
+      body: JSON.stringify({ username, password, faction })
     });
-
-    const data = await response.json();
-    if (response.ok) {
-      setMessage({ type: 'success', text: `Usuario creado: ${data.user.username}` });
+    const data = await res.json();
+    if (res.ok) {
+      setMessage({ type: 'success', text: 'Usuario creado correctamente' });
       setUsername('');
       setPassword('');
       setFaction('');
@@ -47,80 +46,154 @@ const AdminPanel = () => {
     }
   };
 
+  const handleDeleteUser = async (userId, username) => {
+    if (window.confirm(`¿Eliminar usuario ${username}?`)) {
+      const res = await fetch(`http://localhost:4000/api/users/${userId}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMessage({ type: 'success', text: data.message });
+        fetchUsers();
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Error al eliminar usuario' });
+      }
+    }
+  };
+
+  const handleEditUser = (userId) => {
+    setEditingUserId(userId);
+  };
+
+  const handleCloseProfile = () => {
+    setEditingUserId(null);
+  };
+
+  const handleUserUpdated = () => {
+    fetchUsers();
+  };
+
   return (
-    <div style={{ maxWidth: 500, margin: '40px auto', padding: 20, border: '1px solid #ccc', borderRadius: 8 }}>
+    <div style={{ padding: 32, maxWidth: 700, margin: '0 auto' }}>
       <h2>Panel de administración</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Nombre de usuario:</label>
-          <input
-            type="text"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
-            required
-            style={{ width: '100%', marginBottom: 10 }}
-          />
-        </div>
-        <div>
-          <label>Contraseña:</label>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            style={{ width: '100%', marginBottom: 10 }}
-          />
-        </div>
-        <div>
-          <label>Facción:</label>
-          <select
-            value={faction}
-            onChange={e => setFaction(e.target.value)}
-            required
-            style={{ width: '100%', marginBottom: 10 }}
-          >
-            <option value="">Selecciona una facción</option>
-            {factions.map(fac => (
-              <option key={fac._id} value={fac.name}>{fac.name}</option>
-            ))}
-          </select>
-        </div>
-        <button type="submit" style={{ width: '100%' }}>Crear usuario</button>
-      </form>
+
       {message && (
-        <div style={{
-          marginTop: 15,
-          padding: 10,
-          color: message.type === 'success' ? 'green' : 'red',
-          border: `1px solid ${message.type === 'success' ? 'green' : 'red'}`,
-          borderRadius: 4
-        }}>
+        <div
+          style={{
+            background: message.type === 'success' ? '#d4edda' : '#f8d7da',
+            color: message.type === 'success' ? '#155724' : '#721c24',
+            padding: 10,
+            marginBottom: 24,
+            borderRadius: 5
+          }}
+        >
           {message.text}
         </div>
       )}
 
-      <hr style={{ margin: '30px 0' }} />
+      <form onSubmit={handleCreateUser} style={{ marginBottom: 32 }}>
+        <h3>Crear nuevo usuario</h3>
+        <input
+          type="text"
+          placeholder="Nombre de usuario"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+          required
+          style={{ marginRight: 10 }}
+        />
+        <input
+          type="password"
+          placeholder="Contraseña"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          required
+          style={{ marginRight: 10 }}
+        />
+        <select
+          value={faction}
+          onChange={e => setFaction(e.target.value)}
+          required
+          style={{ marginRight: 10 }}
+        >
+          <option value="">Selecciona facción</option>
+          {factions.map(fac => (
+            <option value={fac.name} key={fac._id}>
+              {fac.name}
+            </option>
+          ))}
+        </select>
+        <button type="submit">Crear usuario</button>
+      </form>
 
       <h3>Usuarios existentes</h3>
-      {users.length === 0 ? (
-        <div>No hay usuarios.</div>
-      ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={{ border: '1px solid #ccc', padding: 8 }}>Usuario</th>
-              <th style={{ border: '1px solid #ccc', padding: 8 }}>Facción</th>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr>
+            <th style={{ border: '1px solid #ccc', padding: 8 }}>Usuario</th>
+            <th style={{ border: '1px solid #ccc', padding: 8 }}>Facción</th>
+            <th style={{ border: '1px solid #ccc', padding: 8 }}>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map(user => (
+            <tr key={user._id}>
+              <td style={{ border: '1px solid #ccc', padding: 8 }}>{user.username}</td>
+              <td style={{ border: '1px solid #ccc', padding: 8 }}>{user.faction}</td>
+              <td style={{ border: '1px solid #ccc', padding: 8, display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => handleEditUser(user._id)}
+                  style={{
+                    color: 'white',
+                    background: 'orange',
+                    border: 'none',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                    padding: '4px 12px'
+                  }}
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleDeleteUser(user._id, user.username)}
+                  style={{
+                    color: 'white',
+                    background: 'red',
+                    border: 'none',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                    padding: '4px 12px'
+                  }}
+                >
+                  Eliminar
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {users.map(user => (
-              <tr key={user._id}>
-                <td style={{ border: '1px solid #ccc', padding: 8 }}>{user.username}</td>
-                <td style={{ border: '1px solid #ccc', padding: 8 }}>{user.faction}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Modal o ficha de edición */}
+      {editingUserId && (
+        <div
+          style={{
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            width: '100vw',
+            height: '100vh',
+            background: '#0008',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+        >
+          <UserProfile
+            userId={editingUserId}
+            onClose={handleCloseProfile}
+            onUserUpdated={handleUserUpdated}
+          />
+        </div>
       )}
     </div>
   );
